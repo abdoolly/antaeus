@@ -65,7 +65,8 @@ fun main() {
     val billingService = BillingService(
             paymentProvider = paymentProvider,
             notificationService = NotificationService(),
-            invoiceService = invoiceService
+            invoiceService = invoiceService,
+            customerService = customerService
     )
 
     // running the main billing service scheduler
