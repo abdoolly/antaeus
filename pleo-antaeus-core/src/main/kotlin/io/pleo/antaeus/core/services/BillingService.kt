@@ -58,7 +58,6 @@ class BillingService(
             if (!isCharged) {
                 notificationService.notifyAdmin("Customer with ID: $customerId has no enough balance to make invoice ${invoice.id}")
             }
-
         } catch (err: CustomerNotFoundException) {
             notificationService.notifyAdmin("Customer in invoice with ID: $id does not exist")
             notificationService.notifyCustomer(customerId, "Insufficient balance in your account for invoice ID: ${invoice.id} to be charged")
@@ -109,7 +108,7 @@ class BillingService(
     /**
      * gets the next time in which the scheduler should run at any time
      */
-    fun getNextTime(date: ZonedDateTime? = null): Date {
+    private fun getNextTime(date: ZonedDateTime? = null): Date {
 //        val scheduler = Schedule.parse("1 of month 00:00")
         val scheduler = Schedule.every(1, ChronoUnit.MINUTES)
         if (date != null)
@@ -122,14 +121,14 @@ class BillingService(
     /**
      * util function which convert from zonedDateTime object to Date object
      */
-    fun zonedDateToDate(date: ZonedDateTime): Date {
+    private fun zonedDateToDate(date: ZonedDateTime): Date {
         return Date.from(date.toInstant())
     }
 
     /**
      * cleans the timer after it's execution
      */
-    fun cleanTimer(timer: Timer) {
+    private fun cleanTimer(timer: Timer) {
         timer.cancel()
         timer.purge()
     }
