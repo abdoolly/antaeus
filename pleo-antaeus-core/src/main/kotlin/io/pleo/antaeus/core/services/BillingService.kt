@@ -49,12 +49,18 @@ class BillingService(
         }
     }
 
-
     // do not forget to handle exceptions
     private suspend fun chargeInvoice(invoice: Invoice) {
         val (id, customerId, amount) = invoice
         try {
             val isCharged = paymentProvider.charge(invoice)
+
+            // update invoice status to PAID
+            if (isCharged) {
+                println("invoice with ID $id is PAID successfully")
+                invoiceService.update(invoice.copy(status = InvoiceStatus.PAID))
+            }
+
             if (!isCharged) {
                 notificationService.notifyAdmin("Customer with ID: $customerId has no enough balance to make invoice ${invoice.id}")
             }
@@ -85,7 +91,6 @@ class BillingService(
 
         notificationService.notifyAdmin("There is a network problem in payment provider for invoice ID $id")
     }
-
 
     /**
      * initiate the main billing service schedule on this server
