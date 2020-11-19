@@ -9,6 +9,8 @@ allprojects {
     group = "io.pleo"
     version = "1.0"
 
+    apply(plugin = "org.jetbrains.kotlin.jvm")
+
     repositories {
         mavenCentral()
         jcenter()
@@ -21,4 +23,13 @@ allprojects {
     tasks.withType<Test> {
         useJUnitPlatform()
     }
+
+    dependencies {
+        val implementation by configurations
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
+        implementation("com.github.shyiko.skedule:skedule:0.4.0")
+    }
 }
+
+
+
