@@ -21,13 +21,17 @@ class BillingService(
         private val customerService: CustomerService,
         private val notificationService: NotificationService
 ) {
+
     /**
      * time zone id
      */
     private val ZONE_ID = "CET"
     var retryMap: MutableMap<Int, Int> = mutableMapOf()
 
-    private fun billInvoices() = runBlocking {
+    /**
+     * The function that that charges all the PENDING invoices which runs every month
+     */
+    fun billInvoices() = runBlocking {
         try {
             // get all the invoices that are pending
             val invoices = invoiceService.fetchByStatus(InvoiceStatus.PENDING)
@@ -49,8 +53,11 @@ class BillingService(
         }
     }
 
-    // do not forget to handle exceptions
-    private suspend fun chargeInvoice(invoice: Invoice) {
+    /**
+     * The main charge function which takes an invoice
+     * @param invoice the invoice in which the charge operation should happen on
+     */
+    suspend fun chargeInvoice(invoice: Invoice) {
         val (id, customerId, amount) = invoice
         try {
             val isCharged = paymentProvider.charge(invoice)
@@ -61,6 +68,7 @@ class BillingService(
                 invoiceService.update(invoice.copy(status = InvoiceStatus.PAID))
             }
 
+            // if not charged send a notification to the admin
             if (!isCharged) {
                 notificationService.notifyAdmin("Customer with ID: $customerId has no enough balance to make invoice ${invoice.id}")
             }
@@ -77,7 +85,12 @@ class BillingService(
         }
     }
 
-    private suspend fun retryChargeInvoice(invoice: Invoice) {
+    /**
+     * a function to retry an invoice
+     * it runs in case there was a network error
+     * @param invoice the invoice to retry charging again
+     */
+    suspend fun retryChargeInvoice(invoice: Invoice) {
         val (id) = invoice
         val retries: Int = retryMap.getOrPut(id, { 0 })
 
@@ -95,6 +108,8 @@ class BillingService(
     /**
      * initiate the main billing service schedule on this server
      * that should make an invoice billing cycle run every month
+     * @param date the date in which the scheduler should run the next cycle
+     * could be nullable which is used in the first run
      */
     fun runBillingScheduler(date: Date? = null) {
         val scheduleTime = date ?: getNextTime()
@@ -112,28 +127,37 @@ class BillingService(
 
     /**
      * gets the next time in which the scheduler should run at any time
+     * @param date
      */
-    private fun getNextTime(date: ZonedDateTime? = null): Date {
-//        val scheduler = Schedule.parse("1 of month 00:00")
-        val scheduler = Schedule.every(1, ChronoUnit.MINUTES)
+    fun getNextTime(date: ZonedDateTime? = null): Date {
+        val scheduler = Schedule.parse("1 of month 00:00")
+//        val scheduler = Schedule.every(1, ChronoUnit.MINUTES)
         if (date != null)
             return zonedDateToDate(scheduler.next(date));
 
         val now = ZonedDateTime.now()
-        return zonedDateToDate(scheduler.nextOrSame(now))
+
+        // if today was the first day of the month then return it
+        if (now.dayOfMonth == 1) {
+            return zonedDateToDate(now)
+        }
+
+        return zonedDateToDate(scheduler.next(now))
     }
 
     /**
      * util function which convert from zonedDateTime object to Date object
+     * @param date
      */
-    private fun zonedDateToDate(date: ZonedDateTime): Date {
+    fun zonedDateToDate(date: ZonedDateTime): Date {
         return Date.from(date.toInstant())
     }
 
     /**
      * cleans the timer after it's execution
+     * @param timer
      */
-    private fun cleanTimer(timer: Timer) {
+    fun cleanTimer(timer: Timer) {
         timer.cancel()
         timer.purge()
     }
