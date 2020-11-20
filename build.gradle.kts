@@ -28,6 +28,9 @@ allprojects {
         val implementation by configurations
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.1")
         implementation("com.github.shyiko.skedule:skedule:0.4.0")
+
+        val testImplementation by configurations
+        testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.4.1")
     }
 }
 
