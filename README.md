@@ -90,6 +90,7 @@ we currently have only one backend in which if anything happened to it
 at the time of the periodic cycle running it will not run for this month
 
 **solution**
+
 to be able to solve that problem we will make multiple at least two backends
 and put a Loadbalancer to balance requests between them.
 now if one failed another one will do the cycle.
@@ -101,6 +102,7 @@ we have problem in which both may run the periodic cycle in which
 this will make each invoice double charged or more according to how many backends we have.
 
 **solution**
+
 To be able to solve that we need to make only one server runs the periodic 
 cycle and in case of failure other backends should know so, that they can run it instead
 and at anytime any one backend starts the cycle no other backend should do that.
@@ -126,6 +128,7 @@ we have problem that we not doing a lot except for notifying an admin in case
 of exceptions.
 
 **solution**
+
 we should of course be monitoring our system and 
 all failure cases should be reported including the charge exceptions 
 all should be reported in a single place to have a look at the state of our system.
@@ -137,6 +140,7 @@ we just notify them and don't do any further thing which is a problem since we n
 for next month to charge them.
 
 **solution**
+
 To solve this issue we can make a database table in which we save all those invoices
 which failed for no balance and make another scheduler that runs every day or 3 days one time 
 to retry those customers that has no balance and retry the invoice again.
