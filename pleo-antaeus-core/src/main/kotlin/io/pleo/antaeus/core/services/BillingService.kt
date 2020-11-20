@@ -12,14 +12,12 @@ import io.pleo.antaeus.core.exceptions.NetworkException
 import io.pleo.antaeus.models.Invoice
 import io.pleo.antaeus.models.InvoiceStatus
 import kotlinx.coroutines.*
-import java.time.temporal.ChronoUnit
-import kotlin.system.measureTimeMillis
 
 class BillingService(
-        private val paymentProvider: PaymentProvider,
-        private val invoiceService: InvoiceService,
-        private val customerService: CustomerService,
-        private val notificationService: NotificationService
+        val paymentProvider: PaymentProvider,
+        val invoiceService: InvoiceService,
+        val customerService: CustomerService,
+        val notificationService: NotificationService
 ) {
 
     /**
@@ -49,7 +47,7 @@ class BillingService(
             // cleaning the retry map after all the jobs have finished
             retryMap = mutableMapOf()
         } catch (err: Exception) {
-            notificationService.notifyAdmin("Unexpected error happened while running the period invoice charging cycle ${err.message}")
+            notificationService.notifyAdmin("Unexpected error happened while running the periodic invoice charging cycle ${err.message}")
         }
     }
 
@@ -71,16 +69,17 @@ class BillingService(
             // if not charged send a notification to the admin
             if (!isCharged) {
                 notificationService.notifyAdmin("Customer with ID: $customerId has no enough balance to make invoice ${invoice.id}")
+                notificationService.notifyCustomer(customerId, "Insufficient balance in your account for invoice ID: ${invoice.id} to be charged")
             }
         } catch (err: CustomerNotFoundException) {
             notificationService.notifyAdmin("Customer in invoice with ID: $id does not exist")
-            notificationService.notifyCustomer(customerId, "Insufficient balance in your account for invoice ID: ${invoice.id} to be charged")
         } catch (err: CurrencyMismatchException) {
             val customer = customerService.fetch(customerId)
             notificationService.notifyAdmin("Invoice with ID: $id has mismatching currency invoice currency ${amount.currency}, customer currency ${customer.currency}")
         } catch (err: NetworkException) {
             retryChargeInvoice(invoice)
         } catch (err: Exception) {
+            println(err.message)
             notificationService.notifyAdmin("Unexpected error happened while processing invoice ID : $id")
         }
     }
@@ -90,19 +89,21 @@ class BillingService(
      * it runs in case there was a network error
      * @param invoice the invoice to retry charging again
      */
-    suspend fun retryChargeInvoice(invoice: Invoice) {
-        val (id) = invoice
-        val retries: Int = retryMap.getOrPut(id, { 0 })
+    suspend fun retryChargeInvoice(invoice: Invoice) = coroutineScope {
+        launch {
+            val (id) = invoice
+            val retries: Int = retryMap.getOrPut(id, { 0 })
 
-        // only 3 retries allowed for each invoice
-        if (retries < 3) {
-            retryMap.put(id, retries + 1) // incrementing retries
-            // waiting 30 seconds between each retry
-            delay(30000)
-            return chargeInvoice(invoice)
+            // only 3 retries allowed for each invoice
+            if (retries < 3) {
+                retryMap.put(id, retries + 1) // incrementing retries
+                // waiting 30 seconds between each retry
+                delay(30000)
+                chargeInvoice(invoice)
+            } else {
+                notificationService.notifyAdmin("There is a network problem in payment provider for invoice ID $id")
+            }
         }
-
-        notificationService.notifyAdmin("There is a network problem in payment provider for invoice ID $id")
     }
 
     /**
@@ -131,11 +132,10 @@ class BillingService(
      */
     fun getNextTime(date: ZonedDateTime? = null): Date {
         val scheduler = Schedule.parse("1 of month 00:00")
-//        val scheduler = Schedule.every(1, ChronoUnit.MINUTES)
         if (date != null)
             return zonedDateToDate(scheduler.next(date));
 
-        val now = ZonedDateTime.now()
+        val now = ZonedDateTime.now(ZoneId.of(ZONE_ID))
 
         // if today was the first day of the month then return it
         if (now.dayOfMonth == 1) {
@@ -150,6 +150,7 @@ class BillingService(
      * @param date
      */
     fun zonedDateToDate(date: ZonedDateTime): Date {
+        TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of("CET")))
         return Date.from(date.toInstant())
     }
 
