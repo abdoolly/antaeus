@@ -125,7 +125,7 @@ so, backend-2 should make a health check to backend-1 and in case it died it sho
 the periodic cycle itself and if it was alive then it will recheck in the next hour.
 
 Now we have solved the problem if we have multiple backends to not run the charge cycles
-at the same time by making a good ordering between them.
+at the same time by making good ordering between them.
 
 #### In case of exceptions or failures
 we have problem that we are not doing a lot except for notifying an admin in case
