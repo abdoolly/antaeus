@@ -110,7 +110,7 @@ To be able to solve that we need to make only one server runs the periodic
 cycle and in case of failure the other backends should know so, that they can run it instead
 and at anytime only one backend should run the periodic cycle.
 
-- first thing we should do is make to make database table that stores the next periodic cycle 
+- first thing we should do is to make a database table that stores the next periodic cycle 
 with status **PENDING** and when a backend starts it the status should be changed 
 to **PROCESSING** also storing which backend working on it which forces us to make something like an ID for each of our backends.
 
